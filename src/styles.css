@@ -29,7 +29,8 @@ button {
 .app-shell {
   display: grid;
   grid-template-columns: 360px minmax(0, 1fr);
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .sidebar {
@@ -39,6 +40,8 @@ button {
   border-right: 1px solid #d9d5ca;
   background: #fbfaf6;
   padding: 24px;
+  height: 100%;
+  overflow: hidden;
 }
 
 .brand-row {
@@ -141,6 +144,8 @@ h1 {
   gap: 10px;
   overflow-y: auto;
   padding-right: 2px;
+  flex: 1;
+  min-height: 0;
 }
 
 .place-card {
@@ -191,9 +196,11 @@ h1 {
 
 .viewer-panel {
   display: grid;
-  grid-template-rows: auto minmax(320px, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   min-width: 0;
   background: #f4f2ec;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .viewer-header,
@@ -267,12 +274,12 @@ h2 {
 .map-frame {
   min-height: 0;
   padding: 0 28px;
+  height: 100%;
 }
 
 .map-frame iframe {
   width: 100%;
   height: 100%;
-  min-height: 460px;
   border: 1px solid #cfc9bb;
   border-radius: 8px;
   background: #ddd7ca;

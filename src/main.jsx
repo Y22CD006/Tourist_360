@@ -103,7 +103,7 @@ function streetViewUrl(place) {
   return `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${place.lat},${place.lng}&heading=0&pitch=0&fov=85`;
 }
 
-function RoomScanner({ onBack }) {
+function RoomScanner({ onBack, onSavePanorama }) {
   const [photos, setPhotos] = useState([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [panoramaUrl, setPanoramaUrl] = useState("");
@@ -187,9 +187,13 @@ function RoomScanner({ onBack }) {
         throw new Error(result.error || "Could not create panorama.");
       }
 
-      setPanoramaUrl(`${API_BASE_URL}${result.panoramaUrl}?t=${Date.now()}`);
+      const newPanoUrl = `${API_BASE_URL}${result.panoramaUrl}?t=${Date.now()}`;
+      setPanoramaUrl(newPanoUrl);
       setStitchStatus("done");
       setStitchMessage("Stitched panorama generated. Drag inside the viewer to look around.");
+      if (onSavePanorama) {
+        onSavePanorama(newPanoUrl);
+      }
     } catch (error) {
       setStitchStatus("error");
       setStitchMessage(error.message);
@@ -339,11 +343,86 @@ function samplePhotos(items, limit) {
   });
 }
 
+function ExploresView({ explores, onBack }) {
+  const [activeUrl, setActiveUrl] = useState(explores[explores.length - 1] || "");
+  const panoramaRef = useRef(null);
+  const viewerRef = useRef(null);
+
+  useEffect(() => {
+    if (!activeUrl || !panoramaRef.current) return undefined;
+
+    if (viewerRef.current?.destroy) {
+      viewerRef.current.destroy();
+    }
+
+    viewerRef.current = window.pannellum.viewer(panoramaRef.current, {
+      type: "equirectangular",
+      panorama: activeUrl,
+      autoLoad: true,
+      showControls: true,
+      compass: false,
+    });
+
+    return () => {
+      if (viewerRef.current?.destroy) {
+        viewerRef.current.destroy();
+      }
+      viewerRef.current = null;
+    };
+  }, [activeUrl]);
+
+  return (
+    <main className="room-shell">
+      <header className="room-header">
+        <div>
+          <p className="eyebrow">Your Explores</p>
+          <h2>Generated 360 Panoramas</h2>
+          <span>View your previously generated room scans.</span>
+        </div>
+        <button className="secondary-button" onClick={onBack}>
+          Back to places
+        </button>
+      </header>
+
+      <section className="room-workspace" style={{ display: 'block' }}>
+        <div className="room-preview" style={{ marginBottom: '20px' }}>
+          {activeUrl ? (
+            <div className="pano-viewer" ref={panoramaRef} />
+          ) : (
+            <div className="empty-preview">
+              <Globe2 size={46} aria-hidden="true" />
+              <strong>No explores yet</strong>
+              <span>Generate a panorama in Room Photos first.</span>
+            </div>
+          )}
+        </div>
+
+        {explores.length > 0 && (
+          <div className="thumb-strip" aria-label="Generated panoramas">
+            {explores.map((url, index) => (
+              <button
+                className={url === activeUrl ? "active" : ""}
+                key={index}
+                onClick={() => setActiveUrl(url)}
+                title={`Panorama ${index + 1}`}
+                style={{ width: 'auto', padding: '10px', minWidth: '100px' }}
+              >
+                Scan {index + 1}
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
+    </main>
+  );
+}
+
 function App() {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(PLACES[0]);
   const [view, setView] = useState("street");
   const [mode, setMode] = useState("places");
+  const [explores, setExplores] = useState([]);
 
   const filteredPlaces = useMemo(() => {
     const text = query.trim().toLowerCase();
@@ -356,7 +435,11 @@ function App() {
   const activeSrc = view === "street" ? streetViewEmbed(selected) : mapsEmbed(selected);
 
   if (mode === "room") {
-    return <RoomScanner onBack={() => setMode("places")} />;
+    return <RoomScanner onBack={() => setMode("places")} onSavePanorama={(url) => setExplores((prev) => [...prev, url])} />;
+  }
+
+  if (mode === "explores") {
+    return <ExploresView explores={explores} onBack={() => setMode("places")} />;
   }
 
   return (
@@ -372,10 +455,16 @@ function App() {
           </div>
         </div>
 
-        <button className="room-button" onClick={() => setMode("room")}>
-          <Images size={18} aria-hidden="true" />
-          Room Photos
-        </button>
+        <div style={{ display: "flex", gap: "10px" }}>
+          <button className="room-button" style={{ flex: 1 }} onClick={() => setMode("room")}>
+            <Images size={18} aria-hidden="true" />
+            Room Photos
+          </button>
+          <button className="room-button" style={{ flex: 1 }} onClick={() => setMode("explores")}>
+            <Globe2 size={18} aria-hidden="true" />
+            Explores
+          </button>
+        </div>
 
         <label className="search-box">
           <Search size={18} aria-hidden="true" />
@@ -392,7 +481,10 @@ function App() {
             <button
               className={`place-card ${place.name === selected.name ? "selected" : ""}`}
               key={place.name}
-              onClick={() => setSelected(place)}
+              onClick={() => {
+                setSelected(place);
+                setView("street");
+              }}
             >
               <span className="place-card-top">
                 <span>
