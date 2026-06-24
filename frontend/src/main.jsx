@@ -19,73 +19,6 @@ import "./styles.css";
 const API_BASE_URL = "http://127.0.0.1:5174";
 const MAX_STITCH_PHOTOS = 28;
 
-const PLACES = [
-  {
-    name: "Taj Mahal",
-    city: "Agra, India",
-    type: "Monument",
-    lat: 27.1751,
-    lng: 78.0421,
-    note: "Best for testing tourist-place 360 navigation.",
-  },
-  {
-    name: "India Gate",
-    city: "New Delhi, India",
-    type: "Landmark",
-    lat: 28.6129,
-    lng: 77.2295,
-    note: "Open surroundings make Street View easier to inspect.",
-  },
-  {
-    name: "Gateway of India",
-    city: "Mumbai, India",
-    type: "Waterfront",
-    lat: 18.922,
-    lng: 72.8347,
-    note: "Good example of a public tourist spot with nearby map coverage.",
-  },
-  {
-    name: "Hawa Mahal",
-    city: "Jaipur, India",
-    type: "Heritage",
-    lat: 26.9239,
-    lng: 75.8267,
-    note: "Useful for checking dense urban landmark navigation.",
-  },
-  {
-    name: "Charminar",
-    city: "Hyderabad, India",
-    type: "Heritage",
-    lat: 17.3616,
-    lng: 78.4747,
-    note: "Street-level view depends on available Google coverage.",
-  },
-  {
-    name: "Mysore Palace",
-    city: "Mysuru, India",
-    type: "Palace",
-    lat: 12.3052,
-    lng: 76.6552,
-    note: "A strong test case for destination-first search.",
-  },
-  {
-    name: "Eiffel Tower",
-    city: "Paris, France",
-    type: "Global",
-    lat: 48.8584,
-    lng: 2.2945,
-    note: "International benchmark with rich Street View coverage.",
-  },
-  {
-    name: "Colosseum",
-    city: "Rome, Italy",
-    type: "Global",
-    lat: 41.8902,
-    lng: 12.4922,
-    note: "Good for testing old-city tourist navigation.",
-  },
-];
-
 function mapsEmbed(place) {
   return `https://www.google.com/maps?q=${place.lat},${place.lng}&z=18&output=embed`;
 }
@@ -418,19 +351,50 @@ function ExploresView({ explores, onBack }) {
 }
 
 function App() {
+  const [places, setPlaces] = useState([]);
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState(PLACES[0]);
+  const [selected, setSelected] = useState(null);
   const [view, setView] = useState("street");
   const [mode, setMode] = useState("places");
   const [explores, setExplores] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [placesRes, exploresRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/api/places`),
+          fetch(`${API_BASE_URL}/api/explores`)
+        ]);
+        if (placesRes.ok) {
+          const placesData = await placesRes.json();
+          setPlaces(placesData);
+          if (placesData.length > 0) setSelected(placesData[0]);
+        }
+        if (exploresRes.ok) {
+          const exploresData = await exploresRes.json();
+          setExplores(exploresData);
+        }
+      } catch (err) {
+        console.error("Failed to load initial data", err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadData();
+  }, []);
 
   const filteredPlaces = useMemo(() => {
     const text = query.trim().toLowerCase();
-    if (!text) return PLACES;
-    return PLACES.filter((place) =>
+    if (!text) return places;
+    return places.filter((place) =>
       `${place.name} ${place.city} ${place.type}`.toLowerCase().includes(text)
     );
-  }, [query]);
+  }, [query, places]);
+
+  if (isLoading || !selected) {
+    return <div style={{ padding: 40, textAlign: "center" }}>Loading application...</div>;
+  }
 
   const activeSrc = view === "street" ? streetViewEmbed(selected) : mapsEmbed(selected);
 
