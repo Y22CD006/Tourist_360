@@ -325,7 +325,7 @@ function ExploresView({ explores, onBack }) {
             <div className="empty-preview">
               <Globe2 size={46} aria-hidden="true" />
               <strong>No explores yet</strong>
-              <span>Generate a panorama in Room Photos first.</span>
+              <span>Generate a panorama in Add Photos first.</span>
             </div>
           )}
         </div>
@@ -422,7 +422,7 @@ function App() {
         <div style={{ display: "flex", gap: "10px" }}>
           <button className="room-button" style={{ flex: 1 }} onClick={() => setMode("room")}>
             <Images size={18} aria-hidden="true" />
-            Room Photos
+            Add Photos
           </button>
           <button className="room-button" style={{ flex: 1 }} onClick={() => setMode("explores")}>
             <Globe2 size={18} aria-hidden="true" />
